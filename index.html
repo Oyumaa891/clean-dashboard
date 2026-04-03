@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Үйлчлэгчийн хяналт самбар</title>
+<script src="https://alcdn.msauth.net/browser/2.39.0/js/msal-browser.min.js"></script>
+<style>
+:root{--bg:#f5f4f1;--surface:#fff;--border:#e2e0da;--text:#1a1918;--muted:#6b6966;--hint:#9b9894;--blue:#185fa5;--blue-bg:#e6f1fb;--green:#3b6d11;--green-bg:#eaf3de;--amber:#854f0b;--amber-bg:#faeeda;--red:#a32d2d;--red-bg:#fcebeb;--purple:#3c3489;--purple-bg:#eeedfe;--teal:#085041;--teal-bg:#e1f5ee;--radius:10px;--font:'Segoe UI',system-ui,sans-serif}
+@media(prefers-color-scheme:dark){:root{--bg:#111110;--surface:#1c1b1a;--border:#2e2d2b;--text:#e8e6e1;--muted:#9b9894;--hint:#6b6966}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.5;min-height:100vh}
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px 48px;text-align:center;max-width:400px;width:90%}
+.login-logo{width:48px;height:48px;background:var(--blue-bg);border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px}
+.login-title{font-size:20px;font-weight:600;margin-bottom:8px}
+.login-sub{color:var(--muted);font-size:13px;margin-bottom:28px}
+.btn-ms{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px 20px;background:var(--blue);color:#fff;border:none;border-radius:var(--radius);font-size:14px;font-weight:500;cursor:pointer;transition:opacity .15s}
+.btn-ms:hover{opacity:.88}
+#app{display:none}
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;gap:12px;flex-wrap:wrap}
+.header-left{display:flex;align-items:center;gap:10px}
+.header-icon{width:30px;height:30px;background:var(--blue-bg);border-radius:8px;display:flex;align-items:center;justify-content:center}
+.header-title{font-size:14px;font-weight:600}
+.header-sub{font-size:11px;color:var(--muted)}
+.header-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.user-chip{display:flex;align-items:center;gap:7px;padding:5px 10px;background:var(--bg);border-radius:20px;border:1px solid var(--border);font-size:12px}
+.user-avatar{width:20px;height:20px;border-radius:50%;background:var(--blue-bg);color:var(--blue);font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center}
+.btn-sm{padding:5px 11px;border:1px solid var(--border);background:var(--surface);border-radius:8px;font-size:12px;color:var(--text);cursor:pointer}
+.btn-sm:hover{background:var(--bg)}
+.btn-refresh{padding:5px 12px;border:1px solid var(--blue);background:var(--blue-bg);color:var(--blue);border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:5px}
+.main{padding:20px;max-width:1200px;margin:0 auto}
+.nav-tabs{display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap}
+.ntb{padding:7px 14px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:12px;cursor:pointer;font-family:var(--font);display:flex;align-items:center;gap:5px}
+.ntb.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.ntb .cnt{background:rgba(255,255,255,.2);border-radius:6px;padding:0 5px;font-size:10px}
+.ntb:not(.on) .cnt{background:var(--bg);color:var(--muted)}
+.tab-panel{display:none}.tab-panel.on{display:block}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:18px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px}
+.stat-label{font-size:11px;color:var(--muted);margin-bottom:4px}
+.stat-value{font-size:22px;font-weight:700;line-height:1}
+.stat-sub{font-size:10px;color:var(--hint);margin-top:3px}
+.sc-green .stat-value{color:var(--green)}.sc-blue .stat-value{color:var(--blue)}
+.sc-amber .stat-value{color:var(--amber)}.sc-red .stat-value{color:var(--red)}
+.sc-purple .stat-value{color:var(--purple)}.sc-teal .stat-value{color:var(--teal)}
+.filter-bar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.filter-bar label{font-size:12px;color:var(--muted)}
+.filter-bar select{padding:5px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;font-family:var(--font)}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px}
+@media(max-width:800px){.two-col,.three-col{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px}
+.card-title{font-size:13px;font-weight:600;margin-bottom:10px;color:var(--text)}
+.task-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px}
+.task-row:last-child{border-bottom:none}
+.task-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-wrap{width:65px;height:4px;background:var(--bg);border-radius:2px;flex-shrink:0;overflow:hidden}
+.bar{height:100%;border-radius:2px}
+.pct-lbl{width:28px;text-align:right;color:var(--muted);font-size:11px;flex-shrink:0}
+.emp-table{width:100%;border-collapse:collapse;font-size:12px}
+.emp-table th{text-align:left;padding:5px 7px;color:var(--muted);font-weight:500;border-bottom:1px solid var(--border);font-size:11px}
+.emp-table td{padding:6px 7px;border-bottom:1px solid var(--border)}
+.emp-table tr:last-child td{border-bottom:none}
+.badge{display:inline-block;padding:2px 7px;border-radius:6px;font-size:10px;font-weight:500}
+.bg-green{background:var(--green-bg);color:var(--green)}.bg-blue{background:var(--blue-bg);color:var(--blue)}
+.bg-amber{background:var(--amber-bg);color:var(--amber)}.bg-red{background:var(--red-bg);color:var(--red)}
+.resp-row{display:flex;align-items:flex-start;gap:9px;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px}
+.resp-row:last-child{border-bottom:none}
+.resp-av{width:26px;height:26px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600}
+.resp-tag{font-size:10px;padding:1px 5px;border-radius:4px;background:var(--bg);color:var(--muted)}
+.cp{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px}
+.cp-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:12px}
+.cp-bar-wrap{height:6px;background:var(--bg);border-radius:3px;overflow:hidden}
+.cp-bar{height:100%;border-radius:3px}
+.cat-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.cat-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.rooms-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:7px;margin-top:8px}
+.room-chip{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:12px}
+.loading{display:flex;align-items:center;justify-content:center;padding:60px;color:var(--muted);gap:10px;font-size:13px}
+.spinner{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.error-box{background:var(--red-bg);border:1px solid #f09595;border-radius:var(--radius);padding:12px 14px;font-size:13px;color:var(--red);margin-bottom:12px}
+.config-banner{background:var(--amber-bg);border:1px solid #fac775;border-radius:var(--radius);padding:12px 14px;font-size:13px;color:var(--amber);margin-bottom:14px}
+.last-updated{font-size:11px;color:var(--hint);text-align:right;margin-bottom:8px}
+.note-item{display:flex;gap:7px;padding:7px 9px;border-radius:7px;font-size:12px;margin-bottom:5px;line-height:1.5}
+.note-item.warn{background:var(--amber-bg);color:var(--amber)}
+.note-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;margin-top:5px}
+</style>
+</head>
+<body>
+
+<script>
+const CONFIG={
+  clientId:"ea31d459-a4b7-40a4-9bad-0cc52fe5f039",
+  tenantId:"805fa0fd-fd9c-4970-b62e-54b66d236072",
+  fileId:"ЭНД_EXCEL_FILE_ID_ОРУУЛНА",
+  sheetName:"Sheet1",
+  siteUrl:"",
+};
+const FC={
+  date:"Огноо",employee:"Ажилтны нэр",
+  daily:"Өнөөдөр хийсэн өдөр бүрийн ажлуудаа тэмдэглэнэ үү",
+  weekly:"Локерийн гадна хэсэг цэвэрлэлтийг хийсэн эсэх",
+  flower:"Цэцэг услалт хийсэн эсэх",
+  droj:"Дрож угаалт хийсэн өрөөнүүдийг тэмдэглэнэ үү",
+  furniture:"Буйдан/сандал угаалт хийсэн газруудыг тэмдэглэнэ үү",
+  glass:"Шилэн хана угаалт хийсэн газруудыг тэмдэглэнэ үү",
+  window:"Цонх/шат угаалт хийсэн газруудыг тэмдэглэнэ үү",
+  note:"Тусгай анхааруулга тэмдэглэл",
+};
+const TASKS={
+  daily:{label:"Өдөр бүр",color:"#185fa5",bg:"#e6f1fb",tasks:[
+    "Ажлын хувцас бүрэн өмссөн эсэх","Ариун цэврийн өрөө /эмэгтэй/","Ариун цэврийн өрөө /эрэгтэй/",
+    "Шат /2давхар өгсөх В1 буух/","Цэвэрлэгээний багаж хэрэгсэл угаах","Албадын хэсэг",
+    "Гүйцэтгэх Захирлын өрөөг цэвэрлэх","Аваарын хаалга бариул цэвэрлэх","Гал тогооны өрөөний цэвэрлэх",
+    "Амралтын өрөөний цэвэрлэгээ","1давхар үүдний хэсэг цэвэрлэгээ","Уулзалтын өрөө /1давхарт/",
+    "Хувцасны өрөөний цэвэрлэгээ","Хурлын танхим","Уулзалтын өрөө /базаар/",
+    "Уулзалтын өрөө /соргог/","Уулзалтын өрөө /гэр ахуй/","Уулзалтын өрөө /гросери/",
+    "Утасны өрөө 5,6","Утасны өрөө 3,4","Утасны өрөө 1,2","Хэвлэх өрөө","НББА ЗЭКА өрөө",
+    "Бугатай өрөө","Захирлын өрөө /Цэцэглэн/","Захирлын өрөө /Цогтбаатар/",
+    "Захирлын өрөө /Мөнх-эрдэнэ/","Захирлын өрөө /Жавхлан/","Захирлын өрөө /Зуунцэцэг/ /Отгонбат/"
+  ]},
+  droj:{label:"Дрож угаах · сард 3",color:"#0f6e56",bg:"#e1f5ee",tasks:[
+    "Хурлын танхим","Уулзалтын өрөө /базаар/","Уулзалтын өрөө /соргог/",
+    "Уулзалтын өрөө /гэр ахуй/","Уулзалтын өрөө /гросери/","Захирлын өрөө /Саруул/",
+    "Захирлын өрөө /Цэцэглэн/","Захирлын өрөө /Жавхлан/","Захирлын өрөө /Зуунцэцэг/",
+    "Захирлын өрөө /Отгонбат/","Захирлын өрөө /Мөнх-эрдэнэ/","Захирлын өрөө /Цогтбаатар/",
+    "Бугатай өрөө","А заал","В заал","ЗЭКА Санхүү","Гал тогооны өрөө",
+    "Утасны өрөө 1.2","Утасны өрөө 3.4","Утасны өрөө 5.6","Хэвлэх өрөө","Дотоод хяналтын өрөө"
+  ]},
+  furniture:{label:"Буйдан/сандал · сард 1",color:"#533ab7",bg:"#eeedfe",tasks:[
+    "А заал","Хурлын танхим","Уулзалтын өрөө /базаар/","Уулзалтын өрөө /соргог/",
+    "Уулзалтын өрөө /гэр ахуй/","Уулзалтын өрөө /гросери/","Бугатай өрөө",
+    "Захирлын өрөө /Саруул/","Захирлын өрөө /Цэцэглэн/","Захирлын өрөө /Жавхлан/",
+    "Захирлын өрөө /Зуунцэцэг/","Захирлын өрөө /Отгонбат/","Захирлын өрөө /Мөнх-эрдэнэ/",
+    "Захирлын өрөө /Цогтбаатар/","Цайны өрөөний сандал","1давхарын сандал",
+    "В заалны буйдан","1давхарын буйдан","Амралтын өрөөний буйдан",
+    "Буйдан /Саруул/","Буйдан /Зуунцэцэг/","1давхарын шал үрж угаах"
+  ]},
+  glass:{label:"Шилэн хана · сард 1",color:"#854f0b",bg:"#faeeda",tasks:[
+    "Уулзалтын өрөө /базаар/","Уулзалтын өрөө /соргог/","Уулзалтын өрөө /гэр ахуй/",
+    "Уулзалтын өрөө /гросери/","ЗЭКА Санхүү","Захирлын өрөө /Отгонбат/",
+    "Захирлын өрөө /Цэцэглэн/","Захирлын өрөө /Мөнх-эрдэнэ/","Захирлын өрөө /Цогтбаатар/",
+    "Захирлын өрөө /Зуунцэцэг/","Захирлын өрөө /Жавхлан/","ҮАА-ны өрөө",
+    "Цайн өрөөний шилэн хана","1давхар","А/Ц-өрөөний хана хаалга","В1 давхар хана хаалга шал"
+  ]},
+  window:{label:"Цонх/шат · сард 1",color:"#3c3489",bg:"#eeedfe",tasks:[
+    "А заал цонх","Захирлын өрөө-Цонх /Саруул/","ЗЭКА Санхүү-Цонх",
+    "Хурлын танхим-Цонх","Ариун цэврийн өрөө-Цонх","Шат /Аваарын хаалга 2,2 шат/"
+  ]}
+};
+const EC={"Энхтуяа":{bg:"#e6f1fb",tc:"#185fa5"},"Оюундалай":{bg:"#eaf3de",tc:"#3b6d11"},"Ундрах":{bg:"#faeeda",tc:"#854f0b"},"Цэрэнчимэд":{bg:"#eeedfe",tc:"#3c3489"}};
+</script>
+
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <rect x="3" y="3" width="8" height="8" fill="#185fa5"/><rect x="13" y="3" width="8" height="8" fill="#185fa5" opacity=".7"/>
+        <rect x="3" y="13" width="8" height="8" fill="#185fa5" opacity=".7"/><rect x="13" y="13" width="8" height="8" fill="#185fa5" opacity=".4"/>
+      </svg>
+    </div>
+    <div class="login-title">Үйлчлэгчийн хяналт</div>
+    <div class="login-sub">Microsoft 365 бүртгэлээр нэвтрэн MS Forms өгөгдлийг харна уу</div>
+    <button class="btn-ms" onclick="signIn()">
+      <svg width="18" height="18" viewBox="0 0 21 21" fill="currentColor"><rect x="1" y="1" width="9" height="9"/><rect x="11" y="1" width="9" height="9" opacity=".7"/><rect x="1" y="11" width="9" height="9" opacity=".7"/><rect x="11" y="11" width="9" height="9" opacity=".4"/></svg>
+      Microsoft-оор нэвтрэх
+    </button>
+  </div>
+</div>
+
+<div id="app">
+  <div class="header">
+    <div class="header-left">
+      <div class="header-icon">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="#185fa5" stroke-width="1.5"/><line x1="5" y1="5.5" x2="11" y2="5.5" stroke="#185fa5" stroke-width="1.2"/><line x1="5" y1="8" x2="11" y2="8" stroke="#185fa5" stroke-width="1.2"/><line x1="5" y1="10.5" x2="8.5" y2="10.5" stroke="#185fa5" stroke-width="1.2"/></svg>
+      </div>
+      <div><div class="header-title">Үйлчлэгчийн хяналт самбар</div><div class="header-sub" id="hdate"></div></div>
+    </div>
+    <div class="header-right">
+      <div class="user-chip"><div class="user-avatar" id="uinit">?</div><span id="uname">...</span></div>
+      <button class="btn-refresh" onclick="loadData()">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M1.5 7A5.5 5.5 0 0112 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M12.5 7A5.5 5.5 0 012 9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M10.5 3L12 4.5 13.5 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Шинэчлэх
+      </button>
+      <button class="btn-sm" onclick="signOut()">Гарах</button>
+    </div>
+  </div>
+  <div class="main">
+    <div id="cfg-warn" class="config-banner" style="display:none">⚙️ CONFIG.fileId тохируулаагүй — демо өгөгдөл харагдаж байна</div>
+    <div id="err-box" class="error-box" style="display:none"></div>
+    <div id="loading" class="loading"><div class="spinner"></div>Өгөгдөл татаж байна...</div>
+    <div id="dash" style="display:none">
+      <div class="last-updated" id="lupd"></div>
+      <div class="nav-tabs">
+        <button class="ntb on" onclick="sw('ov')">Хураангуй</button>
+        <button class="ntb" onclick="sw('daily')">Өдөр бүр <span class="cnt">29</span></button>
+        <button class="ntb" onclick="sw('droj')">Дрож угаах <span class="cnt">22</span></button>
+        <button class="ntb" onclick="sw('furniture')">Буйдан/сандал <span class="cnt">22</span></button>
+        <button class="ntb" onclick="sw('glass')">Шилэн хана <span class="cnt">16</span></button>
+        <button class="ntb" onclick="sw('window')">Цонх/шат <span class="cnt">6</span></button>
+        <button class="ntb" onclick="sw('emps')">Ажилтнууд</button>
+      </div>
+      <div class="filter-bar">
+        <label>Ажилтан:</label>
+        <select id="fe" onchange="ra()"><option value="">Бүгд</option></select>
+        <label>Сар:</label>
+        <select id="fm" onchange="ra()"><option value="">Бүгд</option></select>
+      </div>
+
+      <div id="tp-ov" class="tab-panel on">
+        <div class="stat-grid" id="sg"></div>
+        <div class="two-col">
+          <div class="card"><div class="card-title">Өдөр бүрийн гүйцэтгэл</div><div id="odl"></div></div>
+          <div class="card"><div class="card-title">Ажилтнаар</div>
+            <table class="emp-table"><thead><tr><th>Нэр</th><th>Бүртгэл</th><th>Өдөр бүр</th><th>Сарын</th><th></th></tr></thead>
+            <tbody id="etb"></tbody></table>
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="card"><div class="card-title">Сарын ажлын хяналт</div><div id="mov"></div></div>
+          <div class="card"><div class="card-title">Анхааруулга / тэмдэглэл</div><div id="nts"></div></div>
+        </div>
+        <div class="card"><div class="card-title">Сүүлийн бүртгэлүүд</div><div id="rcl"></div></div>
+      </div>
+
+      <div id="tp-daily" class="tab-panel"></div>
+      <div id="tp-droj" class="tab-panel"></div>
+      <div id="tp-furniture" class="tab-panel"></div>
+      <div id="tp-glass" class="tab-panel"></div>
+      <div id="tp-window" class="tab-panel"></div>
+
+      <div id="tp-emps" class="tab-panel">
+        <div class="three-col" id="ecards"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var msalI,curAcc,rawData=[];
+function initMsal(){
+  if(CONFIG.fileId==="ЭНД_EXCEL_FILE_ID_ОРУУЛНА"){
+    document.getElementById("cfg-warn").style.display="block";
+    document.getElementById("login-screen").style.display="none";
+    document.getElementById("app").style.display="block";
+    document.getElementById("loading").style.display="none";
+    document.getElementById("dash").style.display="block";
+    demo(); return;
+  }
+  msalI=new msal.PublicClientApplication({auth:{clientId:CONFIG.clientId,authority:`https://login.microsoftonline.com/${CONFIG.tenantId}`,redirectUri:window.location.origin+window.location.pathname},cache:{cacheLocation:"sessionStorage"}});
+  msalI.handleRedirectPromise().then(r=>{if(r)curAcc=r.account;var a=msalI.getAllAccounts();if(a.length>0){curAcc=a[0];showApp();}});
+}
+async function signIn(){if(!msalI){initMsal();return;}try{var r=await msalI.loginPopup({scopes:["User.Read","Files.Read.All","Sites.Read.All"]});curAcc=r.account;showApp();}catch(e){console.error(e);}}
+function signOut(){if(msalI)msalI.logoutPopup();document.getElementById("login-screen").style.display="flex";document.getElementById("app").style.display="none";}
+async function getTok(){var req={scopes:["User.Read","Files.Read.All","Sites.Read.All"],account:curAcc};try{return(await msalI.acquireTokenSilent(req)).accessToken;}catch{return(await msalI.acquireTokenPopup(req)).accessToken;}}
+function showApp(){
+  document.getElementById("login-screen").style.display="none";document.getElementById("app").style.display="block";
+  var nm=curAcc.name||curAcc.username;
+  document.getElementById("uname").textContent=nm;
+  document.getElementById("uinit").textContent=nm.split(" ").map(w=>w[0]).join("").substring(0,2).toUpperCase();
+  document.getElementById("hdate").textContent=new Date().toLocaleDateString("mn-MN",{year:"numeric",month:"long",day:"numeric"});
+  loadData();
+}
+async function loadData(){
+  document.getElementById("loading").style.display="flex";document.getElementById("dash").style.display="none";document.getElementById("err-box").style.display="none";
+  try{
+    var tok=await getTok(),url;
+    if(CONFIG.siteUrl){var sr=await fetch(`https://graph.microsoft.com/v1.0/sites/${new URL(CONFIG.siteUrl).hostname}:${new URL(CONFIG.siteUrl).pathname}`,{headers:{Authorization:`Bearer ${tok}`}});var sd=await sr.json();url=`https://graph.microsoft.com/v1.0/sites/${sd.id}/drive/items/${CONFIG.fileId}/workbook/worksheets/${encodeURIComponent(CONFIG.sheetName)}/usedRange`;}
+    else{url=`https://graph.microsoft.com/v1.0/me/drive/items/${CONFIG.fileId}/workbook/worksheets/${encodeURIComponent(CONFIG.sheetName)}/usedRange`;}
+    var res=await fetch(url,{headers:{Authorization:`Bearer ${tok}`}});
+    if(!res.ok)throw new Error(`Graph ${res.status}: ${await res.text()}`);
+    var data=await res.json();
+    parse(data.values);ra();
+    document.getElementById("loading").style.display="none";document.getElementById("dash").style.display="block";
+    document.getElementById("lupd").textContent="Сүүлд шинэчлэгдсэн: "+new Date().toLocaleTimeString("mn-MN");
+  }catch(e){document.getElementById("loading").style.display="none";document.getElementById("err-box").style.display="block";document.getElementById("err-box").textContent="Алдаа: "+e.message;}
+}
+function parse(rows){
+  if(!rows||rows.length<2)return;
+  var h=rows[0].map(x=>String(x).trim());rawData=[];
+  for(var i=1;i<rows.length;i++){if(!rows[i][0])continue;var e={};h.forEach((k,j)=>{e[k]=String(rows[i][j]||"").trim();});rawData.push(e);}
+  var emps=[...new Set(rawData.map(r=>r[FC.employee]).filter(Boolean))].sort();
+  var mons=[...new Set(rawData.map(r=>{var d=new Date(r[FC.date]||"");return isNaN(d)?null:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`}).filter(Boolean))].sort().reverse();
+  var es=document.getElementById("fe"),cv=es.value;es.innerHTML='<option value="">Бүгд</option>'+emps.map(e=>`<option>${e}</option>`).join("");if(cv)es.value=cv;
+  var ms=document.getElementById("fm"),cm=ms.value;ms.innerHTML='<option value="">Бүгд</option>'+mons.map(m=>`<option value="${m}">${m}</option>`).join("");if(cm)ms.value=cm;
+}
+function gf(){
+  var ef=document.getElementById("fe").value,mf=document.getElementById("fm").value;
+  return rawData.filter(r=>{
+    if(ef&&r[FC.employee]!==ef)return false;
+    if(mf){var d=new Date(r[FC.date]||"");if(isNaN(d))return false;var ym=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;if(ym!==mf)return false;}
+    return true;
+  });
+}
+function bc(p){return p>=.95?"#3b6d11":p>=.8?"#185fa5":p>=.65?"#854f0b":"#a32d2d";}
+function gb(p){if(p>=.9)return["Маш сайн","bg-green"];if(p>=.8)return["Сайн","bg-blue"];if(p>=.7)return["Дунд","bg-amber"];return["Анхаарах","bg-red"];}
+function cchk(r,k){var v=r[FC[k]]||"";if(!v)return 0;return v.split(/;|,/).map(s=>s.trim()).filter(Boolean).length;}
+function ttk(k){return(TASKS[k]||{tasks:[]}).tasks.length;}
+function sw(t){
+  document.querySelectorAll(".ntb").forEach((b,i)=>{b.classList.toggle("on",["ov","daily","droj","furniture","glass","window","emps"][i]===t);});
+  document.querySelectorAll(".tab-panel").forEach(p=>p.classList.remove("on"));
+  document.getElementById("tp-"+t).classList.add("on");
+}
+function ra(){rStats();rDaily();rEmp();rMon();rNotes();rRecent();["daily","droj","furniture","glass","window"].forEach(rCat);rEmpCards();}
+
+function rStats(){
+  var fd=gf(),td=new Date().toDateString();
+  var tdc=rawData.filter(r=>{var d=new Date(r[FC.date]||"");return!isNaN(d)&&d.toDateString()===td;}).length;
+  var avg=fd.length?Math.round(fd.reduce((s,r)=>s+cchk(r,"daily")/ttk("daily"),0)/fd.length*100):0;
+  var dc=fd.filter(r=>cchk(r,"droj")>0).length,fc=fd.filter(r=>cchk(r,"furniture")>0).length;
+  document.getElementById("sg").innerHTML=`
+    <div class="stat-card sc-green"><div class="stat-label">Нийт бүртгэл</div><div class="stat-value">${fd.length}</div><div class="stat-sub">сонгосон хугацаа</div></div>
+    <div class="stat-card sc-blue"><div class="stat-label">Өнөөдөр</div><div class="stat-value">${tdc}</div><div class="stat-sub">ажилтан</div></div>
+    <div class="stat-card sc-green"><div class="stat-label">Өдөр бүрийн дундаж</div><div class="stat-value">${avg}%</div><div class="stat-sub">гүйцэтгэл</div></div>
+    <div class="stat-card sc-teal"><div class="stat-label">Дрож угааж бүртгэсэн</div><div class="stat-value">${dc}</div><div class="stat-sub">удаа</div></div>
+    <div class="stat-card sc-purple"><div class="stat-label">Буйдан/сандал</div><div class="stat-value">${fc}</div><div class="stat-sub">удаа</div></div>
+    <div class="stat-card sc-amber"><div class="stat-label">100 ажил хяналттай</div><div class="stat-value">100</div><div class="stat-sub">нийт бүртгэлийн ажил</div></div>`;
+}
+function rDaily(){
+  var fd=gf(),el=document.getElementById("odl");
+  if(!fd.length){el.innerHTML='<p style="font-size:12px;color:var(--muted)">Өгөгдөл байхгүй</p>';return;}
+  el.innerHTML=TASKS.daily.tasks.slice(0,16).map(t=>{
+    var done=fd.filter(r=>(r[FC.daily]||"").includes(t)).length;
+    var p=Math.round(done/fd.length*100);
+    return `<div class="task-row"><div class="task-name" title="${t}">${t}</div><div class="bar-wrap"><div class="bar" style="width:${p}%;background:${bc(p/100)}"></div></div><div class="pct-lbl">${p}%</div></div>`;
+  }).join("")+`<div style="font-size:11px;color:var(--muted);padding:5px 0;text-align:center">+ ${TASKS.daily.tasks.length-16} ажил — "Өдөр бүр" таб</div>`;
+}
+function rEmp(){
+  var fd=gf(),es={};
+  fd.forEach(r=>{var nm=r[FC.employee]||"Тодорхойгүй";if(!es[nm])es[nm]={c:0,ds:0,ms:0};es[nm].c++;es[nm].ds+=cchk(r,"daily")/ttk("daily");es[nm].ms+=cchk(r,"droj")+cchk(r,"furniture")+cchk(r,"glass")+cchk(r,"window");});
+  document.getElementById("etb").innerHTML=Object.entries(es).sort((a,b)=>b[1].ds/Math.max(b[1].c,1)-a[1].ds/Math.max(a[1].c,1)).map(([nm,s])=>{
+    var dp=s.c?Math.round(s.ds/s.c*100):0,[lbl,cls]=gb(dp/100),ec=EC[nm]||{bg:"#f1efe8",tc:"#5f5e5a"};
+    return `<tr><td><div style="display:flex;align-items:center;gap:6px"><div style="width:20px;height:20px;border-radius:50%;background:${ec.bg};color:${ec.tc};font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center">${nm.substring(0,2)}</div><b>${nm}</b></div></td><td>${s.c}</td><td>${dp}%</td><td>${Math.round(s.ms)}</td><td><span class="badge ${cls}">${lbl}</span></td></tr>`;
+  }).join("");
+}
+function rMon(){
+  var fd=gf();
+  document.getElementById("mov").innerHTML=[
+    {k:"droj",lbl:"Дрож угаах",tgt:3},{k:"furniture",lbl:"Буйдан/сандал",tgt:1},
+    {k:"glass",lbl:"Шилэн хана",tgt:1},{k:"window",lbl:"Цонх/шат",tgt:1}
+  ].map(c=>{
+    var done=fd.filter(r=>cchk(r,c.k)>0).length;
+    var pct=Math.min(100,Math.round(done/Math.max(c.tgt*4,1)*100));
+    return `<div class="cp"><div class="cp-top"><span style="font-weight:500;font-size:12px">${c.lbl}</span><span style="color:var(--muted);font-size:11px">${done} бүртгэл / Сард ${c.tgt}×</span></div><div class="cp-bar-wrap"><div class="cp-bar" style="width:${pct}%;background:${TASKS[c.k].color}"></div></div></div>`;
+  }).join("");
+}
+function rNotes(){
+  var fd=gf(),ns=fd.map(r=>({emp:r[FC.employee]||"",txt:r[FC.note]||"",date:r[FC.date]||""})).filter(n=>n.txt);
+  document.getElementById("nts").innerHTML=ns.length?ns.slice(-5).reverse().map(n=>`<div class="note-item warn"><div class="note-dot" style="background:var(--amber)"></div><div><b>${n.emp}</b> — ${n.txt.substring(0,80)}</div></div>`).join(""):'<div style="font-size:12px;color:var(--muted)">Тэмдэглэл байхгүй</div>';
+}
+function rRecent(){
+  var fd=gf();
+  document.getElementById("rcl").innerHTML=[...fd].sort((a,b)=>new Date(b[FC.date]||0)-new Date(a[FC.date]||0)).slice(0,8).map(r=>{
+    var nm=r[FC.employee]||"?",dp=Math.round(cchk(r,"daily")/ttk("daily")*100);
+    var d=new Date(r[FC.date]||""),ds=isNaN(d)?"":d.toLocaleDateString("mn-MN",{month:"short",day:"numeric"});
+    var ec=EC[nm]||{bg:"#f1efe8",tc:"#5f5e5a"};
+    var tags=["droj","furniture","glass","window"].filter(k=>cchk(r,k)>0).map(k=>({droj:"Дрож",furniture:"Буйдан",glass:"Шилэн",window:"Цонх"}[k]));
+    return `<div class="resp-row"><div class="resp-av" style="background:${ec.bg};color:${ec.tc}">${nm.substring(0,2)}</div><div style="flex:1;min-width:0"><div style="font-weight:500">${nm}</div><div style="color:var(--muted);font-size:11px">${ds}</div>${tags.length?`<div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:2px">${tags.map(t=>`<span class="resp-tag">${t}</span>`).join("")}</div>`:""}</div><div style="font-weight:600;font-size:12px;color:${bc(dp/100)}">${dp}%</div></div>`;
+  }).join("");
+}
+function rCat(k){
+  var fd=gf(),def=TASKS[k],el=document.getElementById("tp-"+k);
+  var trows=def.tasks.map(t=>{
+    var done=fd.filter(r=>(r[FC[k]]||"").includes(t)).length;
+    var p=fd.length?Math.round(done/fd.length*100):0;
+    return `<div class="task-row"><div class="task-name" title="${t}">${t}</div><div class="bar-wrap"><div class="bar" style="width:${p}%;background:${bc(p/100)}"></div></div><div class="pct-lbl">${p}%</div></div>`;
+  }).join("");
+  var erows=Object.keys(EC).map(nm=>{
+    var rows=fd.filter(r=>r[FC.employee]===nm);
+    var avg=rows.length?Math.round(rows.reduce((s,r)=>s+cchk(r,k)/ttk(k),0)/rows.length*100):0;
+    var done=rows.filter(r=>cchk(r,k)>0).length;
+    var ec=EC[nm];
+    return `<div class="room-chip"><div style="display:flex;align-items:center;gap:6px"><div style="width:20px;height:20px;border-radius:50%;background:${ec.bg};color:${ec.tc};font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center">${nm.substring(0,2)}</div><span>${nm}</span></div><div style="text-align:right"><div style="font-size:12px;font-weight:600;color:${bc(avg/100)}">${avg}%</div><div style="font-size:10px;color:var(--muted)">${done} бүртгэл</div></div></div>`;
+  }).join("");
+  el.innerHTML=`<div class="cat-head"><div class="cat-icon" style="background:${def.bg}"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="2" width="14" height="14" rx="3" stroke="${def.color}" stroke-width="1.5"/><path d="M5 9l3 3 5-5" stroke="${def.color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div style="font-size:15px;font-weight:600">${def.label}</div><div style="font-size:12px;color:var(--muted)">${def.tasks.length} газар · ${fd.length} бүртгэл</div></div></div>
+  <div class="two-col"><div class="card"><div class="card-title">Газар тус бүрийн гүйцэтгэл</div>${trows||'<p style="font-size:12px;color:var(--muted)">Өгөгдөл байхгүй</p>'}</div><div class="card"><div class="card-title">Ажилтнаар</div><div class="rooms-grid">${erows}</div></div></div>`;
+}
+function rEmpCards(){
+  var fd=gf();
+  document.getElementById("ecards").innerHTML=Object.keys(EC).map(nm=>{
+    var rows=fd.filter(r=>r[FC.employee]===nm);
+    var dp=rows.length?Math.round(rows.reduce((s,r)=>s+cchk(r,"daily")/ttk("daily"),0)/rows.length*100):0;
+    var dc=rows.filter(r=>cchk(r,"droj")>0).length,fc=rows.filter(r=>cchk(r,"furniture")>0).length,gc=rows.filter(r=>cchk(r,"glass")>0).length,wc=rows.filter(r=>cchk(r,"window")>0).length;
+    var [lbl,cls]=gb(dp/100),ec=EC[nm];
+    return `<div class="card"><div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><div style="width:40px;height:40px;border-radius:50%;background:${ec.bg};color:${ec.tc};font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center">${nm.substring(0,2)}</div><div><div style="font-weight:600;font-size:14px">${nm}</div><span class="badge ${cls}">${lbl}</span></div><div style="margin-left:auto;font-size:22px;font-weight:700;color:${bc(dp/100)}">${dp}%</div></div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Нийт бүртгэл: <b style="color:var(--text)">${rows.length}</b></div>
+    ${[["Өдөр бүр",dp+"%"],["Дрож угаах",dc+" удаа"],["Буйдан/сандал",fc+" удаа"],["Шилэн хана",gc+" удаа"],["Цонх/шат",wc+" удаа"]].map(([l,v])=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid var(--border)"><span style="color:var(--muted)">${l}</span><b>${v}</b></div>`).join("")}</div>`;
+  }).join("");
+}
+
+// DEMO
+function demo(){
+  var emps=Object.keys(EC),now=new Date();rawData=[];
+  for(var day=0;day<30;day++){
+    var d=new Date(now);d.setDate(d.getDate()-day);
+    if(d.getDay()===0||d.getDay()===6)continue;
+    emps.forEach(emp=>{
+      var pick=(arr,p)=>arr.filter(()=>Math.random()<p).join("; ");
+      var e={};
+      e[FC.date]=d.toISOString();e[FC.employee]=emp;
+      e[FC.daily]=pick(TASKS.daily.tasks,.85);
+      e[FC.droj]=day<9&&day%3===0?pick(TASKS.droj.tasks,.7):"";
+      e[FC.furniture]=day===14?pick(TASKS.furniture.tasks,.6):"";
+      e[FC.glass]=day===14?pick(TASKS.glass.tasks,.65):"";
+      e[FC.window]=day===14?pick(TASKS.window.tasks,.7):"";
+      e[FC.note]=Math.random()>.92?"Гал тогооны печь засвар хэрэгтэй":"";
+      rawData.push(e);
+    });
+  }
+  var mons=[...new Set(rawData.map(r=>{var d=new Date(r[FC.date]);return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`}))].sort().reverse();
+  document.getElementById("fm").innerHTML='<option value="">Бүгд</option>'+mons.map(m=>`<option value="${m}">${m}</option>`).join("");
+  document.getElementById("fe").innerHTML='<option value="">Бүгд</option>'+emps.map(e=>`<option>${e}</option>`).join("");
+  document.getElementById("uname").textContent="Демо горим";document.getElementById("uinit").textContent="DM";
+  document.getElementById("hdate").textContent=new Date().toLocaleDateString("mn-MN",{year:"numeric",month:"long",day:"numeric"});
+  ra();document.getElementById("loading").style.display="none";document.getElementById("dash").style.display="block";
+  document.getElementById("lupd").textContent="⚠️ Демо горим — CONFIG.fileId тохируулна уу";
+}
+window.addEventListener("load",initMsal);
+</script>
+</body>
+</html>
